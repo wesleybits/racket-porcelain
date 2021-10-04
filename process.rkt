@@ -1,20 +1,22 @@
 #lang racket
 (provide (all-defined-out))
 
+(struct proc (stdout stdin pid stderr ctrl))
+
 (define-syntax-rule (allow-program name path)
   (define (name . args)
-    (apply process* path (map ~a (flatten args)))))
+    (apply proc (apply process* path (map ~a (flatten args))))))
 
 (define-syntax-rule (allow-command name)
   (allow-program name (find-executable-path (~a (quote name)))))
 
-(define stdout first)
-(define stdin second)
-(define pid third)
-(define stderr fourth)
+(define stdout proc-stdout)
+(define stdin proc-stdin)
+(define pid proc-pid)
+(define stderr proc-stderr)
 
 (define (ctrl p sig)
-  ((fifth p) sig))
+  ((proc-ctrl p) sig))
 
 (define (proc-wait p) (ctrl p 'wait))
 (define (proc-status p) (ctrl p 'status))
