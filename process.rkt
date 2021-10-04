@@ -31,6 +31,12 @@
   (for ([line (in-lines (port p))])
     (trace line)))
 
+(define (close-proc p)
+  (proc-wait p)
+  (close-input-port (stdout p))
+  (close-input-port (stderr p))
+  (close-output-port (stdin p)))
+
 (define (tail p [out (current-output-port)])
   (let loop:tail ()
     (sync/timeout 1
@@ -52,3 +58,17 @@
       (loop:tail)))
   p)
 
+(define (pipe-procs p . ps)
+  (foldl (lambda (cur prev)
+           (copy-port (stdout prev)
+                      (stdin cur))
+           cur)
+         p
+         ps)
+  (struct-copy proc p
+               [stdout (stdout (last ps))]
+               [pid #f]
+
+               [ctrl (lambda (sig)
+                       (cons (ctrl p sig)
+                             (map (curryr ctrl sig) ps)))]))
