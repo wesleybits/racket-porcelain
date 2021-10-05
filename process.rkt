@@ -1,11 +1,17 @@
 #lang racket
 (provide (all-defined-out))
 
-(struct proc (stdout stdin pid stderr ctrl))
+(struct proc (stdout stdin stderr pid process))
 
 (define-syntax-rule (allow-program name path)
-  (define (name . args)
-    (apply proc (apply process* path (map ~a (flatten args))))))
+  (define (name #:stdin [stdin #f]
+                #:stdout [stdout #f]
+                #:stderr [stderr #f]
+                . args)
+      (let-values ([(sp out in err) (apply subprocess stdout stdin stderr path (map ~a (flatten args)))])
+        (proc out in err
+              (subprocess-pid sp)
+              sp))))
 
 (define-syntax-rule (allow-command name)
   (allow-program name (find-executable-path (~a (quote name)))))
@@ -15,14 +21,75 @@
 (define pid proc-pid)
 (define stderr proc-stderr)
 
-(define (ctrl p sig)
-  ((proc-ctrl p) sig))
+(define (fake-proc fn)
+  (let-values ([(stdin/in stdin/out)   (make-pipe)]
+               [(stdout/in stdout/out) (make-pipe)]
+               [(stderr/in stderr/out) (make-pipe)])
+    (let ([t (thread (lambda ()
+                       (fn stdin/in stdout/out stderr/out)))])
+      (proc stdin/out stdout/in stderr/in 0 t))))
 
-(define (proc-wait p) (ctrl p 'wait))
-(define (proc-status p) (ctrl p 'status))
-(define (proc-exit-code p) (ctrl p 'exit-code))
-(define (proc-kill p) (ctrl p 'kill))
-(define (proc-interrupt p) (ctrl p 'interrupt))
+(define (pipe . ps)
+  (match ps
+    ['()      #f]
+    [(list p) p]
+
+    [(and (list first-p rest-ps ...)
+          (list _ ... last-p))
+     (foldl (lambda (cur prev)
+              (copy-port (stdout prev)
+                         (stdin cur))
+              cur)
+            first-p
+            rest-ps)
+     (struct-copy proc first-p
+                  [stdout (stdout last-p)]
+                  [pid (map pid ps)]
+                  [sp ps])]))
+
+;; deployment/ami_wait_ready $(tools/save-ami | grep NODE | cut -f 2)
+;; (ami-wait-ready (read-output (pipe (tools/save-ami) (grep "NODE") (cut '-f 2))))
+
+(define (proc-wait p)
+  (let ([sp (proc-process p)])
+    (cond [(list? sp)       (map proc-wait sp)]
+          [(subprocess? sp) (subprocess-wait sp)]
+          [(thread? sp)     (thread-wait sp)]
+          [else             (void)])))
+
+(define (proc-status p)
+  (let ([sp (proc-process p)])
+    (cond [(subprocess? sp) (subprocess-status sp)]
+
+          [(and (thread? sp)
+                (thread-running? sp))
+           'running]
+
+          [(and (list? sp)
+                (ormap (lambda (sp) (symbol=? 'done-error (proc-status sp)))
+                       sp))
+           'done-error]
+
+          [(and (list? sp)
+                (andmap (lambda (sp) (symbol=? 'running (proc-status sp)))
+                        sp))
+           'running]
+
+          [else
+           'done-ok])))
+(define (proc-kill p)
+  (let ([sp (proc-process p)])
+    (cond [(subprocess? sp) (subprocess-kill sp #f)]
+          [(list? sp)       (for-each proc-kill sp)]
+          [(thread? sp)     (kill-thread sp)]
+          [else             (void)])))
+
+(define (proc-interrupt p)
+  (let ([sp (proc-process p)])
+    (cond [(subprocess? sp) (subprocess-kill (proc-process p) #t)]
+          [(list? sp)       (for-each proc-kill sp)]
+          [(thread? sp)     (kill-thread sp)]
+          [else             (void)])))
 
 (define (read-output p #:port [port stdout] #:reader [reader port->string])
   (reader (port p)))
@@ -57,18 +124,3 @@
     (when (symbol=? 'running (proc-status p))
       (loop:tail)))
   p)
-
-(define (pipe-procs p . ps)
-  (foldl (lambda (cur prev)
-           (copy-port (stdout prev)
-                      (stdin cur))
-           cur)
-         p
-         ps)
-  (struct-copy proc p
-               [stdout (stdout (last ps))]
-               [pid #f]
-
-               [ctrl (lambda (sig)
-                       (cons (ctrl p sig)
-                             (map (curryr ctrl sig) ps)))]))
