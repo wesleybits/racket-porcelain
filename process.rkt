@@ -45,7 +45,7 @@
      (struct-copy proc first-p
                   [stdout (stdout last-p)]
                   [pid (map pid ps)]
-                  [sp ps])]))
+                  [process ps])]))
 
 ;; deployment/ami_wait_ready $(tools/save-ami | grep NODE | cut -f 2)
 ;; (ami-wait-ready (read-output (pipe (tools/save-ami) (grep "NODE") (cut '-f 2))))
