@@ -22,3 +22,7 @@
                 (kill-thread t)))))
 
   done-chan)
+
+(define (poll-evt* reload-data ready? [backoff #f] [max-wait 600])
+  (poll-evt (poll reload-data ready? backoff)
+            max-wait))
