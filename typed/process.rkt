@@ -1,36 +1,36 @@
 #lang typed/racket
 
 (require/typed/provide "../process.rkt"
-  [#:opaque Proc proc?]
-  [stdout (-> Proc Input-Port)]
-  [stderr (-> Proc Input-Port)]
-  [stdin (-> Proc Output-Port)]
-  [pid (-> Proc Nonnegative-Integer)]
-  [fake-proc (-> (-> Input-Port Output-Port Output-Port Any)
-                 Proc)]
-  [pipe (-> Proc * Proc)]
-  [proc-wait (-> Proc Void)]
-  [proc-status (-> Proc (U 'running 'done-ok 'done-error))]
-  [proc-kill (-> Proc Void)]
+  [#:opaque Proc  proc?]
+  [stdout         (-> Proc Input-Port)]
+  [stderr         (-> Proc Input-Port)]
+  [stdin          (-> Proc Output-Port)]
+  [pid            (-> Proc Nonnegative-Integer)]
+  [fake-proc      (-> (-> Input-Port Output-Port Output-Port Any)
+                      Proc)]
+  [pipe           (-> Proc * Proc)]
+  [proc-wait      (-> Proc Void)]
+  [proc-status    (-> Proc (U 'running 'done-ok 'done-error))]
+  [proc-kill      (-> Proc Void)]
   [proc-interrupt (-> Proc Void)]
-  [read-output (All (A)
-                    (-> Proc
-                        [#:port (-> Proc Input-Port)]
-                        [#:reader (-> Input-Port A)]
-                        [#:close? Boolean]
-                        A))]
-  [trace-output (-> Proc
-                    [#:port (-> Proc Input-Port)]
-                    [#:tracer (-> String Any)]
-                    [#:close? Boolean]
-                    Void)]
-  [close-proc (-> Proc Void)]
-  [tail (->* (Proc) (Output-Port) Proc)])
+  [read-output    (All (A)
+                       (-> Proc
+                           [#:port   (-> Proc Input-Port)]
+                           [#:reader (-> Input-Port A)]
+                           [#:close? Boolean]
+                           A))]
+  [trace-output   (-> Proc
+                      [#:port   (-> Proc Input-Port)]
+                      [#:tracer (-> String Any)]
+                      [#:close? Boolean]
+                      Void)]
+  [close-proc     (-> Proc Void)]
+  [tail           (->* (Proc) (Output-Port) Proc)])
 
 (require (only-in "../process.rkt"
                   [allow-program untyped:allow-program]))
 
-(define-type Program (-> [#:stdin (Option Input-Port)]
+(define-type Program (-> [#:stdin  (Option Input-Port)]
                          [#:stdout (Option Output-Port)]
                          [#:stderr (Option Output-Port)]
                          Any *
