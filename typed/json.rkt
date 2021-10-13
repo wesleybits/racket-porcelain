@@ -24,6 +24,6 @@
   [string->jsexpr (-> String Jsexpr)]
   [jsexpr->string (-> Jsexpr String)])
 
-(require/typed "../json.rkt"
+(require/typed/provide "../json.rkt"
   [jsexpr-walk       (-> Jsexpr (U Index Symbol) * Jsexpr)]
   [pretty-print-json (->* (Jsexpr) (Positive-Integer Output-Port) Void)])
