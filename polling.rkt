@@ -13,8 +13,12 @@
   (define done-chan (make-channel))
   (define t (thread (lambda ()
                       (channel-put done-chan (poll)))))
+
+  ;; watchdog to kill 't' should the poll get hung default kill-time is 10
+  ;; minutes. ymmv, so it's a parameter.
   (thread (lambda ()
-            (let ([done? (sync/timeout max-wait done-chan)])
+            (let ([done? (sync/timeout max-wait t)])
               (unless done?
                 (kill-thread t)))))
+
   done-chan)

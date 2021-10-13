@@ -59,7 +59,11 @@
 
 (define (proc-status p)
   (let ([sp (proc-process p)])
-    (cond [(subprocess? sp) (subprocess-status sp)]
+    (cond [(subprocess? sp)
+           (match (subprocess-status sp)
+             ['running 'running]
+             [0        'done-ok]
+             [_        'done-error])]
 
           [(and (thread? sp)
                 (thread-running? sp))
@@ -77,6 +81,7 @@
 
           [else
            'done-ok])))
+
 (define (proc-kill p)
   (let ([sp (proc-process p)])
     (cond [(subprocess? sp) (subprocess-kill sp #f)]
@@ -91,12 +96,16 @@
           [(thread? sp)     (kill-thread sp)]
           [else             (void)])))
 
-(define (read-output p #:port [port stdout] #:reader [reader port->string])
-  (reader (port p)))
+(define (read-output p #:port [port stdout] #:reader [reader port->string] #:close? [close? #t])
+  (let ([output (reader (port p))])
+    (when close?
+      (close-proc p))
+    output))
 
-(define (trace-output p #:port [port stdout] #:tracer [trace displayln])
+(define (trace-output p #:port [port stdout] #:tracer [trace displayln] #:close? [close? #t])
   (for ([line (in-lines (port p))])
-    (trace line)))
+    (trace line))
+  (when close? (close-proc p)))
 
 (define (close-proc p)
   (proc-wait p)
