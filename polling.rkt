@@ -1,13 +1,12 @@
 #lang racket
 (provide (all-defined-out))
 
-(define (poll reload-data ready? [backoff #f])
+(define (poll data reload-data ready? [backoff #f])
   (lambda ()
-    (let loop:poll ()
-      (let ([data (reload-data)])
-        (cond [(ready? data) data]
-              [else          (when backoff (sleep backoff))
-                             (loop:poll)])))))
+    (let loop:poll ([data data])
+      (cond [(ready? data) data]
+            [else          (when backoff (sleep backoff))
+                           (loop:poll (reload-data))]))))
 
 (define (poll-evt poll [max-wait 600])
   (define done-chan (make-channel))
@@ -23,6 +22,6 @@
 
   done-chan)
 
-(define (poll-evt* reload-data ready? [backoff #f] [max-wait 600])
-  (poll-evt (poll reload-data ready? backoff)
+(define (poll-evt* data reload-data ready? [backoff #f] [max-wait 600])
+  (poll-evt (poll data reload-data ready? backoff)
             max-wait))
