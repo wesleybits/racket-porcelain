@@ -47,9 +47,6 @@
                   [pid (map pid ps)]
                   [process ps])]))
 
-;; deployment/ami_wait_ready $(tools/save-ami | grep NODE | cut -f 2)
-;; (ami-wait-ready (read-output (pipe (tools/save-ami) (grep "NODE") (cut '-f 2))))
-
 (define (proc-wait p)
   (let ([sp (proc-process p)])
     (cond [(list? sp)       (map proc-wait sp)]

@@ -27,6 +27,10 @@
   [close-proc     (-> Proc Void)]
   [tail           (->* (Proc) (Output-Port) Proc)])
 
+(require/typed "../process.rkt"
+  [proc (-> Input-Port Output-Port Input-Port Integer Subprocess
+            Proc)])
+
 (require (only-in "../process.rkt"
                   [allow-program untyped:allow-program]))
 
@@ -37,9 +41,23 @@
                          Proc))
 
 (define-syntax-rule (allow-program name path)
-  (begin
-    (: name Program)
-    (untyped:allow-program name path)))
+  (define (name #:stdin [stdin : (Option Input-Port) #f]
+                #:stdout [stdout : (Option Output-Port) #f]
+                #:stderr [stderr : (Option Output-Port) #f]
+                . [args : Any *])
+          : Proc
+    (let-values ([(sp out in err)
+                  (apply subprocess
+                         stdout
+                         stdin
+                         stderr
+                         (assert path path-string?)
+                         (map ~a (flatten args)))])
+      (proc (assert out input-port?)
+            (assert in output-port?)
+            (assert err input-port?)
+            (subprocess-pid sp)
+            sp))))
 
 (define-syntax-rule (allow-command name)
   (allow-program name (find-executable-path (symbol->string (quote name)))))
