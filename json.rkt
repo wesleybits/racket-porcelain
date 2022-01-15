@@ -23,7 +23,7 @@
                                                   (error 'jsexpr-walk "Not a JSON structure type: ~w" expr)]))
 
 (define (jsexpr-update-path expr . path-&-update)
-  (match path
+  (match path-&-update
     ['()                             expr]
     [(list updater)                  (updater expr)]
     [(list (? index? idx) updater)   #:when (list? expr)
@@ -31,11 +31,11 @@
     [(list (? symbol? key) updater)  #:when (hash? expr)
                                      (hash-update expr key updater)]
     [(list (? index? idx) more ...)  #:when (list? expr)
-                                     (apply jsexpr-update-path (list-ref expr idx) more)]
+                                     (list-set expr idx (apply jsexpr-update-path (list-ref expr idx) more))]
     [(list (? symbol? key) more ...) #:when (hash? expr)
-                                     (apply jsexpr-update-path (hash-ref expr idx) more)]
+                                     (hash-set expr key (apply jsexpr-update-path (hash-ref expr idx) more))]
     [(list idx _ ...)
-     (error 'jsexpr-update-path "Illegal index for expr\n  expr:~a\n  index:~a" expr index)]))
+     (error 'jsexpr-update-path "Illegal index for expr\n  expr:~a\n  index:~a" expr idx)]))
 
 (define (pretty-print-json jsexpr [indent-width 4] [out (current-output-port)])
   (define (print-indent width)
