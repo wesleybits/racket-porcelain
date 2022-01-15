@@ -4,7 +4,8 @@
 
 (require/typed/provide "../polling.rkt"
   [poll      (All (A)
-                  (->* ((-> A)
+                  (->* (A
+                        (-> A)
                         (-> A Boolean))
                        ((Option Positive-Integer))
                        (Poll A)))]
@@ -13,7 +14,8 @@
                        (Positive-Integer)
                        (Evtof A)))]
   [poll-evt* (All (A)
-                  (->* ((-> A)
+                  (->* (A
+                        (-> A)
                         (-> A Boolean))
                        ((Option Positive-Integer)
                         Positive-Integer)
